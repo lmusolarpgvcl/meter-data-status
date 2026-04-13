@@ -1,0 +1,2643 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PGVCL Meter Data Dashboard | Premium Enterprise View</title>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- DataTables CSS -->
+    <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            --glass-bg: rgba(255, 255, 255, 0.8);
+            --bg-color: #f1f5f9;
+            --text-color: #1e293b;
+            --card-bg: #ffffff;
+            --border-color: #e2e8f0;
+            --highlight-color: #fbbf24;
+            --pending: #ef4444;
+            --received: #10b981;
+        }
+        [data-theme="dark"] {
+            --bg-color: #0f172a;
+            --text-color: #f1f5f9;
+            --card-bg: #1e293b;
+            --glass-bg: rgba(30, 41, 59, 0.8);
+            --border-color: #334155;
+            --highlight-color: #f59e0b;
+        }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            font-family: 'Outfit', sans-serif;
+            min-height: 100vh;
+        }
+        .container { max-width: 95%; padding: 2rem 0; }
+        .glass-header {
+            background: var(--primary-gradient);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 3rem 2rem;
+            border-radius: 24px;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+            color: white;
+        }
+        .glass-header::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            pointer-events: none;
+        }
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+            transition: transform 0.3s ease;
+        }
+        .theme-toggle {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(5px);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .theme-toggle:hover { transform: rotate(15deg) scale(1.1); background: rgba(255, 255, 255, 0.3); }
+        .table-container { border-radius: 16px; overflow: hidden; margin-top: 1rem; }
+        table.dataTable thead th {
+            background-color: var(--card-bg) !important;
+            color: var(--text-color);
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+            padding: 1rem !important;
+            border-bottom: 2px solid var(--border-color) !important;
+            text-align: center;
+        }
+        .table > tbody > tr { transition: all 0.2s ease; cursor: pointer; }
+        .table > tbody > tr:hover { background-color: rgba(79, 70, 229, 0.05) !important; }
+        [data-theme="dark"] .table > tbody > tr:hover { background-color: rgba(255, 255, 255, 0.03) !important; }
+        
+        /* Prevent clipping */
+        .table th, .table td { 
+            padding: 0.8rem 0.5rem !important;
+            vertical-align: middle;
+        }
+        @media (min-width: 992px) {
+            .table th, .table td { white-space: nowrap !important; padding: 1rem !important; }
+        }
+        
+        .table-container { 
+            border-radius: 16px; 
+            overflow-x: auto; 
+            margin-top: 1rem;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .status-badge {
+            padding: 0.4rem 1rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            display: inline-block;
+        }
+        .status-PENDING { background-color: #fee2e2; color: #ef4444; }
+        .status-RECEIVED { background-color: #d1fae5; color: #10b981; }
+        [data-theme="dark"] .status-PENDING { background-color: rgba(239, 68, 68, 0.1); }
+        [data-theme="dark"] .status-RECEIVED { background-color: rgba(16, 185, 129, 0.1); }
+        
+        .details-child {
+            padding: 1.5rem !important;
+            background-color: var(--bg-color) !important;
+            border-left: 4px solid #4f46e5;
+        }
+        .details-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+        .detail-item { display: flex; flex-direction: column; }
+        .detail-label { font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 700; margin-bottom: 0.2rem; }
+        .detail-value { font-size: 0.95rem; font-weight: 600; color: var(--text-color); }
+        
+        mark { background-color: var(--highlight-color); color: #000; padding: 0.1rem 0.2rem; border-radius: 4px; }
+        
+        .dataTables_filter input {
+            border: 1px solid var(--border-color) !important;
+            border-radius: 12px !important;
+            padding: 0.6rem 1rem !important;
+            min-width: 300px;
+            background: var(--card-bg) !important;
+            color: var(--text-color) !important;
+        }
+        .dataTables_length select {
+            border: 1px solid var(--border-color) !important;
+            border-radius: 8px !important;
+            background: var(--card-bg) !important;
+            color: var(--text-color) !important;
+        }
+        .pagination .page-link {
+            border: 1px solid var(--border-color);
+            background: var(--card-bg);
+            color: var(--text-color);
+            margin: 0 2px;
+            border-radius: 8px;
+        }
+        .pagination .active .page-link { background: var(--primary-gradient); border: none; }
+        
+        #scrollTopBtn {
+            position: fixed;
+            right: 30px;
+            bottom: 30px;
+            width: 50px;
+            height: 50px;
+            border-radius: 15px;
+            background: var(--primary-gradient);
+            color: white;
+            border: none;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+        #scrollTopBtn:hover { transform: translateY(-5px); }
+
+        /* Animations */
+        .fade-in { animation: fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* Modal Styles */
+        .modal-content {
+            background-color: var(--card-bg);
+            border: none;
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+        .modal-header {
+            background: var(--primary-gradient);
+            color: white;
+            border: none;
+            padding: 1.5rem;
+        }
+        .modal-body { padding: 2.5rem; text-align: center; }
+        .modal-footer { border: none; padding: 1.5rem; }
+        .update-icon-circle {
+            width: 80px;
+            height: 80px;
+            background: rgba(79, 70, 229, 0.1);
+            color: #4f46e5;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+            font-size: 2rem;
+        }
+        [data-theme="dark"] .update-icon-circle { background: rgba(255, 255, 255, 0.05); color: #818cf8; }
+
+        .stats-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 2rem;
+        }
+        .stat-card {
+            background: var(--card-bg);
+            padding: 1.5rem 3rem;
+            border-radius: 20px;
+            border: 1px solid var(--border-color);
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s ease;
+            min-width: 300px;
+        }
+        .stat-card:hover { transform: translateY(-5px); }
+        .stat-value { font-size: 1.8rem; font-weight: 700; line-height: 1; margin-bottom: 0.3rem; }
+        .stat-label { font-size: 0.75rem; text-transform: uppercase; font-weight: 700; opacity: 0.6; letter-spacing: 0.05em; }
+        .stat-total { color: #4f46e5; }
+        .stat-received { color: #10b981; }
+        .stat-pending { color: #ef4444; }
+
+        @media (max-width: 768px) {
+            .glass-header { padding: 2rem 1rem; border-radius: 0; margin: -2rem -1rem 1rem -1rem; }
+            .container { width: 100%; padding: 0.5rem; }
+            .stats-container { gap: 0.5rem; }
+            .stat-card { padding: 0.8rem 0.5rem; border-radius: 12px; }
+            .stat-value { font-size: 1.2rem; }
+            .stat-label { font-size: 0.6rem; }
+            .table { font-size: 0.75rem; }
+            .name-col { white-space: normal !important; min-width: 150px; }
+            .div-col { min-width: 80px; }
+            .status-col { min-width: 80px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Update Notification Modal -->
+<div class="modal fade" id="updateModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+        <div class="modal-body">
+            <div class="update-icon-circle">
+                <i class="fas fa-sync-alt fa-spin"></i>
+            </div>
+            <h3 class="fw-bold mb-2">Sync Completed</h3>
+            <p class="text-muted mb-4">Last meter update data status<br><span class="fw-bold text-primary">16:36 13-04-2026</span></p>
+            <button type="button" class="btn btn-primary w-100 py-3 rounded-4 fw-bold" data-bs-dismiss="modal" style="background: var(--primary-gradient); border: none;">OK, View Dashboard</button>
+        </div>
+    </div>
+  </div>
+</div>
+
+<div class="container fade-in">
+    <div class="glass-header d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="display-5 fw-bold mb-1"><i class="fas fa-solar-panel me-3"></i>Solar Meter Pending list - March - 2026</h1>
+            <p class="mb-0 opacity-75"><i class="far fa-calendar-alt me-2"></i>Last Synchronized: <span id="lastUpdated">16:36 13-04-2026</span></p>
+        </div>
+        <div class="theme-toggle" onclick="toggleTheme()" title="Switch Theme">
+            <i class="fas fa-moon" id="themeIcon"></i>
+        </div>
+    </div>
+
+    <div class="stats-container">
+        <div class="stat-card">
+            <div class="stat-value stat-pending">217</div>
+            <div class="stat-label">Total Pending Meters</div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="table-container">
+            <table id="mainTable" class="table table-hover w-100">
+                <thead>
+                    <tr>
+                        <th style="width: 40px;"></th>
+                        <th class="div-col text-center">Division</th>
+                        <th class="name-col text-center">Generator Name</th>
+                        <th class="meter-col text-center">Meter No</th>
+                        <th class="d-none">Searchable Details</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    
+                    <tr data-details='{"Unnamed: 2": "SR.NO", "Unnamed: 3": "CIRCLE", "Unnamed: 5": "SUB STATION", "Unnamed: 8": "MAKE", "Unnamed: 9": "SCHEME"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">DIVISION</td>
+                        <td class="text-center name-col">NAME OF GENERATORS</td>
+                        <td class="text-center meter-col fw-bold text-primary">METER</td>
+                        <td class="d-none">
+                            SR.NO CIRCLE SUB STATION MAKE SCHEME 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "1", "Unnamed: 3": "AMRELI", "Unnamed: 5": "66 KV CHITAL", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "PM KUSUM-C"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">AMRELI-1</td>
+                        <td class="text-center name-col">FRIENDS IMPEX</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ9283B</td>
+                        <td class="d-none">
+                            1 AMRELI 66 KV CHITAL SECURE GPRS PM KUSUM-C 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "2", "Unnamed: 3": "AMRELI", "Unnamed: 5": "66 KV CHITAL", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "PM KUSUM-C"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">AMRELI-1</td>
+                        <td class="text-center name-col">FRIENDS IMPEX</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGKC0009M</td>
+                        <td class="d-none">
+                            2 AMRELI 66 KV CHITAL SECURE GPRS PM KUSUM-C 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "3", "Unnamed: 3": "AMRELI", "Unnamed: 5": "66 KV CHITAL", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "PM KUSUM-C"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">AMRELI-1</td>
+                        <td class="text-center name-col">FRIENDS IMPEX</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGKC0145M</td>
+                        <td class="d-none">
+                            3 AMRELI 66 KV CHITAL SECURE GPRS PM KUSUM-C 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "4", "Unnamed: 3": "AMRELI", "Unnamed: 5": "BHILDI", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">AMRELI-1</td>
+                        <td class="text-center name-col">66 KV BHILDI</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ11156B</td>
+                        <td class="d-none">
+                            4 AMRELI BHILDI SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "5", "Unnamed: 3": "AMRELI", "Unnamed: 5": "BHILDI", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">AMRELI-1</td>
+                        <td class="text-center name-col">M/S MILAN SUN POWER </td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5842B</td>
+                        <td class="d-none">
+                            5 AMRELI BHILDI SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "6", "Unnamed: 3": "AMRELI", "Unnamed: 5": "LILIYA", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">AMRELI-1</td>
+                        <td class="text-center name-col">M/S VISHAL FOUNDRY</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5506B</td>
+                        <td class="d-none">
+                            6 AMRELI LILIYA SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "7", "Unnamed: 3": "AMRELI", "Unnamed: 5": "CHAVAND-4", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">AMRELI-1</td>
+                        <td class="text-center name-col">66 KV CHAVAND-4</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ12088B</td>
+                        <td class="d-none">
+                            7 AMRELI CHAVAND-4 SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "8", "Unnamed: 3": "AMRELI", "Unnamed: 5": "GUNDRAN", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "DREBP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">AMRELI-1</td>
+                        <td class="text-center name-col">M/s SAMP TECHNOLOGIES </td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ12872B</td>
+                        <td class="d-none">
+                            8 AMRELI GUNDRAN SECURE GPRS DREBP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "9", "Unnamed: 3": "AMRELI", "Unnamed: 5": "HADALA", "Unnamed: 8": "GENUS", "Unnamed: 9": "SSDSP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">AMRELI-2</td>
+                        <td class="text-center name-col">66 KV HADALA</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ5785B</td>
+                        <td class="d-none">
+                            9 AMRELI HADALA GENUS SSDSP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "10", "Unnamed: 3": "AMRELI", "Unnamed: 5": "HADALA", "Unnamed: 8": "GENUS", "Unnamed: 9": "SSDSP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">AMRELI-2</td>
+                        <td class="text-center name-col">KUSUMBEN PARSHOTTAMBHAI VEKARIA</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGSDP30610B</td>
+                        <td class="d-none">
+                            10 AMRELI HADALA GENUS SSDSP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "11", "Unnamed: 3": "AMRELI", "Unnamed: 5": "HADALA", "Unnamed: 8": "GENUS", "Unnamed: 9": "SSDSP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">AMRELI-2</td>
+                        <td class="text-center name-col">VEKARIA KAVITABEN SR</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGSDP31676B</td>
+                        <td class="d-none">
+                            11 AMRELI HADALA GENUS SSDSP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "12", "Unnamed: 3": "AMRELI", "Unnamed: 5": "NAGADHRA-1", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">AMRELI-2</td>
+                        <td class="text-center name-col">66 KV NAGADHRA</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ7378B</td>
+                        <td class="d-none">
+                            12 AMRELI NAGADHRA-1 SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "13", "Unnamed: 3": "AMRELI", "Unnamed: 5": "NAGADHRA-1", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">AMRELI-2</td>
+                        <td class="text-center name-col">M/S MAGOTTEAUX INDUSTRIES PVT LTD</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5388B</td>
+                        <td class="d-none">
+                            13 AMRELI NAGADHRA-1 SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "14", "Unnamed: 3": "AMRELI", "Unnamed: 5": "NAGADHRA-1", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">AMRELI-2</td>
+                        <td class="text-center name-col">M/S FLOREX CERAMIC PVT LTD</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5645B</td>
+                        <td class="d-none">
+                            14 AMRELI NAGADHRA-1 SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "15", "Unnamed: 3": "AMRELI", "Unnamed: 5": "NAGADHRA-1", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">AMRELI-2</td>
+                        <td class="text-center name-col">M/S MAGOTTEAUX INDUSTRIES PVT LTD</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5866B</td>
+                        <td class="d-none">
+                            15 AMRELI NAGADHRA-1 SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "16", "Unnamed: 3": "AMRELI", "Unnamed: 5": "AMRUTPUR(JEERA)", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">AMRELI-2</td>
+                        <td class="text-center name-col">66 KV AMRUTPUR (JEERA)</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ9417B</td>
+                        <td class="d-none">
+                            16 AMRELI AMRUTPUR(JEERA) SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "17", "Unnamed: 3": "AMRELI", "Unnamed: 5": "SURYA PRATAPGADH (ANIDA)", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">AMRELI-2</td>
+                        <td class="text-center name-col">66 KV SURYA PRATAPGADH (ANIDA)</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ11255B</td>
+                        <td class="d-none">
+                            17 AMRELI SURYA PRATAPGADH (ANIDA) SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "18", "Unnamed: 3": "AMRELI", "Unnamed: 5": "SURYA PRATAPGADH (ANIDA) - 2", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">AMRELI-2</td>
+                        <td class="text-center name-col">66 KV SURYA PRATAPGADH (ANIDA) - 2</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ11245B</td>
+                        <td class="d-none">
+                            18 AMRELI SURYA PRATAPGADH (ANIDA) - 2 SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "19", "Unnamed: 3": "AMRELI", "Unnamed: 5": "JAFRABAD", "Unnamed: 8": "GENUS", "Unnamed: 9": "SSDSP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">SAVARKUNDLA</td>
+                        <td class="text-center name-col">SANKHAT BALUBHAI NANJIBHAI</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGSDP30321B</td>
+                        <td class="d-none">
+                            19 AMRELI JAFRABAD GENUS SSDSP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "20", "Unnamed: 3": "AMRELI", "Unnamed: 5": "DUNGAR", "Unnamed: 8": "GENUS", "Unnamed: 9": "SSDSP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">SAVARKUNDLA</td>
+                        <td class="text-center name-col">66 KV DUNGAR</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ5978B</td>
+                        <td class="d-none">
+                            20 AMRELI DUNGAR GENUS SSDSP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "21", "Unnamed: 3": "AMRELI", "Unnamed: 5": "DUNGAR", "Unnamed: 8": "GENUS", "Unnamed: 9": "SSDSP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">SAVARKUNDLA</td>
+                        <td class="text-center name-col">NAYNABEN LAKHANBHAI RATHOD</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGSDP32048B</td>
+                        <td class="d-none">
+                            21 AMRELI DUNGAR GENUS SSDSP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "22", "Unnamed: 3": "AMRELI", "Unnamed: 5": "66 KV MOTA BARMAN", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "PM KUSUM-C"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">SAVARKUNDLA</td>
+                        <td class="text-center name-col">M/s TERAPANTH FOODS LIMITED</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ9293B</td>
+                        <td class="d-none">
+                            22 AMRELI 66 KV MOTA BARMAN SECURE GPRS PM KUSUM-C 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "23", "Unnamed: 3": "AMRELI", "Unnamed: 5": "66 KV MOTA BARMAN", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "PM KUSUM-C"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">SAVARKUNDLA</td>
+                        <td class="text-center name-col">M/s TERAPANTH FOODS LIMITED</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ9295B</td>
+                        <td class="d-none">
+                            23 AMRELI 66 KV MOTA BARMAN SECURE GPRS PM KUSUM-C 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "24", "Unnamed: 3": "AMRELI", "Unnamed: 5": "66 KV MOTA BARMAN", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "PM KUSUM-C"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">SAVARKUNDLA</td>
+                        <td class="text-center name-col">M/s TERAPANTH FOODS LIMITED</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGKC0024M</td>
+                        <td class="d-none">
+                            24 AMRELI 66 KV MOTA BARMAN SECURE GPRS PM KUSUM-C 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "25", "Unnamed: 3": "AMRELI", "Unnamed: 5": "TIMBI", "Unnamed: 8": "SECURE", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">SAVARKUNDLA</td>
+                        <td class="text-center name-col">66 KV TIMBI</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ8289B</td>
+                        <td class="d-none">
+                            25 AMRELI TIMBI SECURE CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "26", "Unnamed: 3": "AMRELI", "Unnamed: 5": "TIMBI", "Unnamed: 8": "SECURE", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">SAVARKUNDLA</td>
+                        <td class="text-center name-col">M/S RAINBOW TECHNOCAST</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5029C</td>
+                        <td class="d-none">
+                            26 AMRELI TIMBI SECURE CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "27", "Unnamed: 3": "AMRELI", "Unnamed: 5": "TIMBI", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">SAVARKUNDLA</td>
+                        <td class="text-center name-col">M/S RAIMAC TECHNOCAST</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5031B</td>
+                        <td class="d-none">
+                            27 AMRELI TIMBI SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "28", "Unnamed: 3": "AMRELI", "Unnamed: 5": "66 KV VAJADI", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "PM KUSUM-C"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">UNA</td>
+                        <td class="text-center name-col">M/s FOUR SQUARE GREEN ENERGY PRIVATE LIMITED</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ12446B</td>
+                        <td class="d-none">
+                            28 AMRELI 66 KV VAJADI SECURE GPRS PM KUSUM-C 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "29", "Unnamed: 3": "AMRELI", "Unnamed: 5": "66 KV VAJADI", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "PM KUSUM-C"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">UNA</td>
+                        <td class="text-center name-col">M/s FOUR SQUARE GREEN ENERGY PRIVATE LIMITED</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ12521B</td>
+                        <td class="d-none">
+                            29 AMRELI 66 KV VAJADI SECURE GPRS PM KUSUM-C 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "30", "Unnamed: 3": "AMRELI", "Unnamed: 5": "66 KV DANDI", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "PM KUSUM-C"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">UNA</td>
+                        <td class="text-center name-col">M/s FOUR SQUARE GREEN ENERGY PRIVATE LIMITED</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGKC0185M</td>
+                        <td class="d-none">
+                            30 AMRELI 66 KV DANDI SECURE GPRS PM KUSUM-C 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "31", "Unnamed: 3": "ANJAR", "Unnamed: 5": "CHANDRANI", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">ANJAR</td>
+                        <td class="text-center name-col">66 KV CHANDRANI</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ6574B</td>
+                        <td class="d-none">
+                            31 ANJAR CHANDRANI SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "32", "Unnamed: 3": "ANJAR", "Unnamed: 5": "SUVAI", "Unnamed: 8": "SECURE", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">BHACHAU</td>
+                        <td class="text-center name-col">66 KV SUVAI</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ5753B</td>
+                        <td class="d-none">
+                            32 ANJAR SUVAI SECURE CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "33", "Unnamed: 3": "ANJAR", "Unnamed: 5": "SUVAI", "Unnamed: 8": "SECURE", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">BHACHAU</td>
+                        <td class="text-center name-col">M/S N D SOLAR PVT LTD</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5196C</td>
+                        <td class="d-none">
+                            33 ANJAR SUVAI SECURE CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "34", "Unnamed: 3": "ANJAR", "Unnamed: 5": "SUVAI", "Unnamed: 8": "SECURE", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">BHACHAU</td>
+                        <td class="text-center name-col">M/S K M SOLAR PVT LTD</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5197C</td>
+                        <td class="d-none">
+                            34 ANJAR SUVAI SECURE CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "35", "Unnamed: 3": "ANJAR", "Unnamed: 5": "SUVAI", "Unnamed: 8": "SECURE", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">BHACHAU</td>
+                        <td class="text-center name-col">M/S VIJALI SOLAR PVT LTD</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5198C</td>
+                        <td class="d-none">
+                            35 ANJAR SUVAI SECURE CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "36", "Unnamed: 3": "ANJAR", "Unnamed: 5": "SUVAI", "Unnamed: 8": "SECURE", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">BHACHAU</td>
+                        <td class="text-center name-col">M/S SARLI SOLAR PVT LTD</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5199C</td>
+                        <td class="d-none">
+                            36 ANJAR SUVAI SECURE CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "37", "Unnamed: 3": "ANJAR", "Unnamed: 5": "SUVAI-2", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">BHACHAU</td>
+                        <td class="text-center name-col">M/s CEFONE CERAMIC LLP </td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5914B</td>
+                        <td class="d-none">
+                            37 ANJAR SUVAI-2 SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "38", "Unnamed: 3": "ANJAR", "Unnamed: 5": "PRAGPAR-2", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">BHACHAU</td>
+                        <td class="text-center name-col">66 KV PRAGPAR-2</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ12314B</td>
+                        <td class="d-none">
+                            38 ANJAR PRAGPAR-2 SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "39", "Unnamed: 3": "ANJAR", "Unnamed: 5": "PRAGPAR-2", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">BHACHAU</td>
+                        <td class="text-center name-col">M/s PARCOS TILES LLP - 1.925 MW</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5949B</td>
+                        <td class="d-none">
+                            39 ANJAR PRAGPAR-2 SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "40", "Unnamed: 3": "ANJAR", "Unnamed: 5": "DESHALPAR", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "DREBP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">BHACHAU</td>
+                        <td class="text-center name-col">KAILASH AUM VENTURES LLP </td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ13845B</td>
+                        <td class="d-none">
+                            40 ANJAR DESHALPAR SECURE GPRS DREBP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "41", "Unnamed: 3": "ANJAR", "Unnamed: 5": "DESHALPAR", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "DREBP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">BHACHAU</td>
+                        <td class="text-center name-col">KAILASH AUM VENTURES LLP </td>
+                        <td class="text-center meter-col fw-bold text-primary">PGDRE0218B</td>
+                        <td class="d-none">
+                            41 ANJAR DESHALPAR SECURE GPRS DREBP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "42", "Unnamed: 3": "BHAVNAGAR", "Unnamed: 5": "BILA-2", "Unnamed: 8": "SECURE", "Unnamed: 9": "SSDSP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">MAHUVA</td>
+                        <td class="text-center name-col">66 KV BILA-2</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ5989B</td>
+                        <td class="d-none">
+                            42 BHAVNAGAR BILA-2 SECURE SSDSP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "43", "Unnamed: 3": "BHAVNAGAR", "Unnamed: 5": "BILA-2", "Unnamed: 8": "SECURE", "Unnamed: 9": "SSDSP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">MAHUVA</td>
+                        <td class="text-center name-col">SHANTINATH MOTORS PVT LTD</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGSDP30128B</td>
+                        <td class="d-none">
+                            43 BHAVNAGAR BILA-2 SECURE SSDSP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "44", "Unnamed: 3": "BHAVNAGAR", "Unnamed: 5": "66 KV VADALI", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "PM KUSUM-C"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">MAHUVA</td>
+                        <td class="text-center name-col">M/s PERFECT CHEMFOOD INDUSTRIES</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ10138B</td>
+                        <td class="d-none">
+                            44 BHAVNAGAR 66 KV VADALI SECURE GPRS PM KUSUM-C 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "45", "Unnamed: 3": "BHAVNAGAR", "Unnamed: 5": "66 KV VADALI", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "PM KUSUM-C"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">MAHUVA</td>
+                        <td class="text-center name-col">M/s PERFECT CHEMFOOD INDUSTRIES</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGKC0054M</td>
+                        <td class="d-none">
+                            45 BHAVNAGAR 66 KV VADALI SECURE GPRS PM KUSUM-C 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "46", "Unnamed: 3": "BHAVNAGAR", "Unnamed: 5": "66 KV BILA", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "PM KUSUM-C"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">MAHUVA</td>
+                        <td class="text-center name-col">M/s SAMPADA ENTERPRISE</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ10200B</td>
+                        <td class="d-none">
+                            46 BHAVNAGAR 66 KV BILA SECURE GPRS PM KUSUM-C 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "47", "Unnamed: 3": "BHAVNAGAR", "Unnamed: 5": "66 KV BILA", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "PM KUSUM-C"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">MAHUVA</td>
+                        <td class="text-center name-col">M/s SAMPADA ENTERPRISE</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGKC0048M</td>
+                        <td class="d-none">
+                            47 BHAVNAGAR 66 KV BILA SECURE GPRS PM KUSUM-C 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "48", "Unnamed: 3": "BHAVNAGAR", "Unnamed: 5": "66 KV  BELAMPAR", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "PM KUSUM-C"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">MAHUVA</td>
+                        <td class="text-center name-col">M/s The Kutch Salt And Allied Industries Ltd </td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ10269B</td>
+                        <td class="d-none">
+                            48 BHAVNAGAR 66 KV  BELAMPAR SECURE GPRS PM KUSUM-C 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "49", "Unnamed: 3": "BHAVNAGAR", "Unnamed: 5": "66 KV  BELAMPAR", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "PM KUSUM-C"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">MAHUVA</td>
+                        <td class="text-center name-col">M/s The Kutch Salt And Allied Industries Ltd </td>
+                        <td class="text-center meter-col fw-bold text-primary">PGKC0137M</td>
+                        <td class="d-none">
+                            49 BHAVNAGAR 66 KV  BELAMPAR SECURE GPRS PM KUSUM-C 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "50", "Unnamed: 3": "BHAVNAGAR", "Unnamed: 5": "DUDHALA", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "DREBP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">MAHUVA</td>
+                        <td class="text-center name-col">M/s SKA DAIRY FOODS INDIA PRIVATE LIMITED</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ12525B</td>
+                        <td class="d-none">
+                            50 BHAVNAGAR DUDHALA SECURE GPRS DREBP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "51", "Unnamed: 3": "BHAVNAGAR", "Unnamed: 5": "DUDHALA", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "DREBP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">MAHUVA</td>
+                        <td class="text-center name-col">M/s SKA DAIRY FOODS INDIA PRIVATE LIMITED</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGDRE0049B</td>
+                        <td class="d-none">
+                            51 BHAVNAGAR DUDHALA SECURE GPRS DREBP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "52", "Unnamed: 3": "BHAVNAGAR", "Unnamed: 5": "BHANDARIYA-1", "Unnamed: 8": "SECURE", "Unnamed: 9": "SSDSP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">PALITANA</td>
+                        <td class="text-center name-col">66 KV BHANDARIYA-1</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ5985B</td>
+                        <td class="d-none">
+                            52 BHAVNAGAR BHANDARIYA-1 SECURE SSDSP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "53", "Unnamed: 3": "BHAVNAGAR", "Unnamed: 5": "BHANDARIYA-1", "Unnamed: 8": "SECURE", "Unnamed: 9": "SSDSP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">PALITANA</td>
+                        <td class="text-center name-col">NEW KANDLA SALT AND CHEMICAL CO PVT LTD</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGSDP30263B</td>
+                        <td class="d-none">
+                            53 BHAVNAGAR BHANDARIYA-1 SECURE SSDSP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "54", "Unnamed: 3": "BHAVNAGAR", "Unnamed: 5": "BHANDARIYA-2", "Unnamed: 8": "SECURE", "Unnamed: 9": "SSDSP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">PALITANA</td>
+                        <td class="text-center name-col">66 KV BHANDARIYA-2</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ5987B</td>
+                        <td class="d-none">
+                            54 BHAVNAGAR BHANDARIYA-2 SECURE SSDSP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "55", "Unnamed: 3": "BHAVNAGAR", "Unnamed: 5": "BHANDARIYA-2", "Unnamed: 8": "SECURE", "Unnamed: 9": "SSDSP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">PALITANA</td>
+                        <td class="text-center name-col">THE KUTCH SALT & ALLIED INDUSTRIES LIMITED</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGSDP30264B</td>
+                        <td class="d-none">
+                            55 BHAVNAGAR BHANDARIYA-2 SECURE SSDSP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "56", "Unnamed: 3": "BHAVNAGAR", "Unnamed: 5": "66 KV DEVALIYA", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "PM KUSUM-C"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">PALITANA</td>
+                        <td class="text-center name-col">M/s FOUR SQUARE GREEN ENERGY PRIVATE LIMITED</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ12420B</td>
+                        <td class="d-none">
+                            56 BHAVNAGAR 66 KV DEVALIYA SECURE GPRS PM KUSUM-C 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "57", "Unnamed: 3": "BHUJ", "Unnamed: 5": "SANDHAN", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "DREBP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">NAKHATRANA</td>
+                        <td class="text-center name-col">M/S SKA DAIRY FOODS INDIA PVT LTD </td>
+                        <td class="text-center meter-col fw-bold text-primary">PGDRE0048B</td>
+                        <td class="d-none">
+                            57 BHUJ SANDHAN SECURE GPRS DREBP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "58", "Unnamed: 3": "BHUJ", "Unnamed: 5": "JAKHAU-4", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "DREBP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">NAKHATRANA</td>
+                        <td class="text-center name-col">M/s MEGHDOOT LEISURE LLP </td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ12527B</td>
+                        <td class="d-none">
+                            58 BHUJ JAKHAU-4 SECURE GPRS DREBP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "59", "Unnamed: 3": "BHUJ", "Unnamed: 5": "DEVISAR-3", "Unnamed: 8": "GENUS - MEMIGHTY", "Unnamed: 9": "SSDSP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">NAKHATRANA</td>
+                        <td class="text-center name-col">CAPITAL INDUSTRY</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGSDP30746B</td>
+                        <td class="d-none">
+                            59 BHUJ DEVISAR-3 GENUS - MEMIGHTY SSDSP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "60", "Unnamed: 3": "BHUJ", "Unnamed: 5": "DEVISAR-1", "Unnamed: 8": "GENUS", "Unnamed: 9": "SSDSP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">NAKHATRANA</td>
+                        <td class="text-center name-col">MONEX SOLAR POWER LLP</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGSDP30611B</td>
+                        <td class="d-none">
+                            60 BHUJ DEVISAR-1 GENUS SSDSP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "61", "Unnamed: 3": "BHUJ", "Unnamed: 5": "DEVISAR-2", "Unnamed: 8": "GENUS", "Unnamed: 9": "SSDSP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">NAKHATRANA</td>
+                        <td class="text-center name-col">M/S SHREE RAM CAOLIN</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5268B</td>
+                        <td class="d-none">
+                            61 BHUJ DEVISAR-2 GENUS SSDSP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "62", "Unnamed: 3": "BHUJ", "Unnamed: 5": "DEVISAR-2", "Unnamed: 8": "GENUS", "Unnamed: 9": "SSDSP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">NAKHATRANA</td>
+                        <td class="text-center name-col">N R SOLAR PARK</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGSDP30834B</td>
+                        <td class="d-none">
+                            62 BHUJ DEVISAR-2 GENUS SSDSP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "63", "Unnamed: 3": "BHUJ", "Unnamed: 5": "DEVISAR-1", "Unnamed: 8": "GENUS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">NAKHATRANA</td>
+                        <td class="text-center name-col">M/S MONEX SOLAR POWER LLP</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGSDP30611B</td>
+                        <td class="d-none">
+                            63 BHUJ DEVISAR-1 GENUS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "64", "Unnamed: 3": "BHUJ", "Unnamed: 5": "DEVISAR-2", "Unnamed: 8": "GENUS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">NAKHATRANA</td>
+                        <td class="text-center name-col">M/S SHREE RAM CAOLIN</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5268B</td>
+                        <td class="d-none">
+                            64 BHUJ DEVISAR-2 GENUS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "65", "Unnamed: 3": "BHUJ", "Unnamed: 5": "DEVISAR-2", "Unnamed: 8": "GENUS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">NAKHATRANA</td>
+                        <td class="text-center name-col">M/S N R SOLAR PARK</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGSDP30834B</td>
+                        <td class="d-none">
+                            65 BHUJ DEVISAR-2 GENUS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "66", "Unnamed: 3": "BHUJ", "Unnamed: 5": " RAVA", "Unnamed: 8": "GENUS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">NAKHATRANA</td>
+                        <td class="text-center name-col">66 KV RAVA</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG0044B</td>
+                        <td class="d-none">
+                            66 BHUJ  RAVA GENUS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "67", "Unnamed: 3": "BHUJ", "Unnamed: 5": " RAVA", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">NAKHATRANA</td>
+                        <td class="text-center name-col">BHANU AGRO</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5729B</td>
+                        <td class="d-none">
+                            67 BHUJ  RAVA SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "68", "Unnamed: 3": "BOTAD", "Unnamed: 5": "66 KV SALANGPUR ", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "PM KUSUM-C"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">BOTAD</td>
+                        <td class="text-center name-col">M/s INDIAN INFRASTRUCTURE & PROJECT INDIA (P) LTD</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ9054B</td>
+                        <td class="d-none">
+                            68 BOTAD 66 KV SALANGPUR  SECURE GPRS PM KUSUM-C 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "69", "Unnamed: 3": "BOTAD", "Unnamed: 5": "66 KV SALANGPUR ", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "PM KUSUM-C"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">BOTAD</td>
+                        <td class="text-center name-col">M/s INDIAN INFRASTRUCTURE & PROJECT INDIA (P) LTD</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGKC0042M</td>
+                        <td class="d-none">
+                            69 BOTAD 66 KV SALANGPUR  SECURE GPRS PM KUSUM-C 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "70", "Unnamed: 3": "BOTAD", "Unnamed: 5": "66 KV MOTI VAVDI (LIMBDI)", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "PM KUSUM-C"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">BOTAD</td>
+                        <td class="text-center name-col">M/s INDIAN INFRASTRUCTURE & PROJECT INDIA (P) LTD</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ10006B</td>
+                        <td class="d-none">
+                            70 BOTAD 66 KV MOTI VAVDI (LIMBDI) SECURE GPRS PM KUSUM-C 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "71", "Unnamed: 3": "BOTAD", "Unnamed: 5": "66 KV MOTI VAVDI (LIMBDI)", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "PM KUSUM-C"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">BOTAD</td>
+                        <td class="text-center name-col">M/s INDIAN INFRASTRUCTURE & PROJECT INDIA (P) LTD</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGKC0040M</td>
+                        <td class="d-none">
+                            71 BOTAD 66 KV MOTI VAVDI (LIMBDI) SECURE GPRS PM KUSUM-C 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "72", "Unnamed: 3": "BOTAD", "Unnamed: 5": "66 KV HADDAD", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "PM KUSUM-C"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">BOTAD</td>
+                        <td class="text-center name-col">M/s INDIAN INFRASTRUCTURE & PROJECT INDIA (P) LTD</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ9779B</td>
+                        <td class="d-none">
+                            72 BOTAD 66 KV HADDAD SECURE GPRS PM KUSUM-C 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "73", "Unnamed: 3": "BOTAD", "Unnamed: 5": "66 KV RANPUR", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "PM KUSUM-C"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">BOTAD</td>
+                        <td class="text-center name-col">M/s INDIAN INFRASTRUCTURE & PROJECT INDIA (P) LTD</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ9945B</td>
+                        <td class="d-none">
+                            73 BOTAD 66 KV RANPUR SECURE GPRS PM KUSUM-C 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "74", "Unnamed: 3": "BOTAD", "Unnamed: 5": "66 KV RANPUR", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "PM KUSUM-C"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">BOTAD</td>
+                        <td class="text-center name-col">M/s INDIAN INFRASTRUCTURE & PROJECT INDIA (P) LTD</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGKC0041M</td>
+                        <td class="d-none">
+                            74 BOTAD 66 KV RANPUR SECURE GPRS PM KUSUM-C 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "75", "Unnamed: 3": "BOTAD", "Unnamed: 5": "66 KV RANPUR", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "PM KUSUM-C"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">BOTAD</td>
+                        <td class="text-center name-col">M/s INDIAN INFRASTRUCTURE & PROJECT INDIA (P) LTD</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGKC0150M</td>
+                        <td class="d-none">
+                            75 BOTAD 66 KV RANPUR SECURE GPRS PM KUSUM-C 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "76", "Unnamed: 3": "BOTAD", "Unnamed: 5": "66 KV BOTAD", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "PM KUSUM-C"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">BOTAD</td>
+                        <td class="text-center name-col">M/s INDIAN INFRASTRUCTURE & PROJECT INDIA (P) LTD</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ9777B</td>
+                        <td class="d-none">
+                            76 BOTAD 66 KV BOTAD SECURE GPRS PM KUSUM-C 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "77", "Unnamed: 3": "BOTAD", "Unnamed: 5": "132KV BARWALA", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "PM KUSUM-C"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">BOTAD</td>
+                        <td class="text-center name-col">M/s INDIAN INFRASTRUCTURE & PROJECT INDIA (P) LTD</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGKC0030M</td>
+                        <td class="d-none">
+                            77 BOTAD 132KV BARWALA SECURE GPRS PM KUSUM-C 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "78", "Unnamed: 3": "BOTAD", "Unnamed: 5": "132KV BARWALA", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "PM KUSUM-C"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">BOTAD</td>
+                        <td class="text-center name-col">M/s INDIAN INFRASTRUCTURE & PROJECT INDIA (P) LTD</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ9775B</td>
+                        <td class="d-none">
+                            78 BOTAD 132KV BARWALA SECURE GPRS PM KUSUM-C 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "79", "Unnamed: 3": "BOTAD", "Unnamed: 5": "BOTAD-2", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">BOTAD</td>
+                        <td class="text-center name-col">66 KV BOTAD-2</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ12150B</td>
+                        <td class="d-none">
+                            79 BOTAD BOTAD-2 SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "80", "Unnamed: 3": "BOTAD", "Unnamed: 5": "INGORALA", "Unnamed: 8": "GENUS", "Unnamed: 9": "SSDSP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">GADHADA</td>
+                        <td class="text-center name-col">66 KV INGORALA</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ5584B</td>
+                        <td class="d-none">
+                            80 BOTAD INGORALA GENUS SSDSP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "81", "Unnamed: 3": "BOTAD", "Unnamed: 5": "INGORALA", "Unnamed: 8": "GENUS", "Unnamed: 9": "SSDSP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">GADHADA</td>
+                        <td class="text-center name-col">GABU KHIMJIBHAI MERMABHAI</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGSDP30855B</td>
+                        <td class="d-none">
+                            81 BOTAD INGORALA GENUS SSDSP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "82", "Unnamed: 3": "BOTAD", "Unnamed: 5": "INGORALA", "Unnamed: 8": "GENUS", "Unnamed: 9": "SSDSP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">GADHADA</td>
+                        <td class="text-center name-col">GABU MEENABEN KHIMJIBHAI</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGSDP30856B</td>
+                        <td class="d-none">
+                            82 BOTAD INGORALA GENUS SSDSP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "83", "Unnamed: 3": "BOTAD", "Unnamed: 5": "66KV GADHADA", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "PM KUSUM-C"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">GADHADA</td>
+                        <td class="text-center name-col">M/s INDIAN INFRASTRUCTURE & PROJECT INDIA (P) LTD</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ9132B</td>
+                        <td class="d-none">
+                            83 BOTAD 66KV GADHADA SECURE GPRS PM KUSUM-C 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "84", "Unnamed: 3": "BOTAD", "Unnamed: 5": "66KV GADHADA", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "PM KUSUM-C"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">GADHADA</td>
+                        <td class="text-center name-col">M/s INDIAN INFRASTRUCTURE & PROJECT INDIA (P) LTD</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGKC0034M</td>
+                        <td class="d-none">
+                            84 BOTAD 66KV GADHADA SECURE GPRS PM KUSUM-C 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "85", "Unnamed: 3": "BOTAD", "Unnamed: 5": "66 KV DHOLA", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "PM KUSUM-C"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">GADHADA</td>
+                        <td class="text-center name-col">M/s Friends Impex </td>
+                        <td class="text-center meter-col fw-bold text-primary">PGKC0138M</td>
+                        <td class="d-none">
+                            85 BOTAD 66 KV DHOLA SECURE GPRS PM KUSUM-C 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "88", "Unnamed: 3": "JAMNAGAR", "Unnamed: 5": "KOTDA BAVISHI-1", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "SSDSP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JAMJODHPUR</td>
+                        <td class="text-center name-col">66 KV KOTDA BAVISHI-1</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ5253B</td>
+                        <td class="d-none">
+                            88 JAMNAGAR KOTDA BAVISHI-1 SECURE GPRS SSDSP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "89", "Unnamed: 3": "JAMNAGAR", "Unnamed: 5": "KOTDA BAVISHI-1", "Unnamed: 8": "SECURE", "Unnamed: 9": "SSDSP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JAMJODHPUR</td>
+                        <td class="text-center name-col">M/S NISHI ENERGY</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGSDP30024C</td>
+                        <td class="d-none">
+                            89 JAMNAGAR KOTDA BAVISHI-1 SECURE SSDSP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "90", "Unnamed: 3": "JAMNAGAR", "Unnamed: 5": "KOTDA BAVISHI-1", "Unnamed: 8": "SECURE", "Unnamed: 9": "SSDSP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JAMJODHPUR</td>
+                        <td class="text-center name-col">M/S GAYATRI ENERGY</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGSDP30025B</td>
+                        <td class="d-none">
+                            90 JAMNAGAR KOTDA BAVISHI-1 SECURE SSDSP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "91", "Unnamed: 3": "JAMNAGAR", "Unnamed: 5": "KOTDA BAVISHI-1", "Unnamed: 8": "SECURE", "Unnamed: 9": "SSDSP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JAMJODHPUR</td>
+                        <td class="text-center name-col">M/S V K ENERGY</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGSDP30026B</td>
+                        <td class="d-none">
+                            91 JAMNAGAR KOTDA BAVISHI-1 SECURE SSDSP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "92", "Unnamed: 3": "JAMNAGAR", "Unnamed: 5": "KOTDA BAVISHI-1", "Unnamed: 8": "SECURE", "Unnamed: 9": "SSDSP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JAMJODHPUR</td>
+                        <td class="text-center name-col">M/S JALARAM ENERGY</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGSDP30027B</td>
+                        <td class="d-none">
+                            92 JAMNAGAR KOTDA BAVISHI-1 SECURE SSDSP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "93", "Unnamed: 3": "JAMNAGAR", "Unnamed: 5": "KOTDA BAVISHI-1", "Unnamed: 8": "SECURE", "Unnamed: 9": "SSDSP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JAMJODHPUR</td>
+                        <td class="text-center name-col">M/S D R ENERGY</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGSDP30028B</td>
+                        <td class="d-none">
+                            93 JAMNAGAR KOTDA BAVISHI-1 SECURE SSDSP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "94", "Unnamed: 3": "JAMNAGAR", "Unnamed: 5": "KOTDA BAVISHI-1", "Unnamed: 8": "SECURE", "Unnamed: 9": "SSDSP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JAMJODHPUR</td>
+                        <td class="text-center name-col">M/S ADITI ENERGY</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGSDP30029B</td>
+                        <td class="d-none">
+                            94 JAMNAGAR KOTDA BAVISHI-1 SECURE SSDSP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "95", "Unnamed: 3": "JAMNAGAR", "Unnamed: 5": "KOTDA BAVISHI-2", "Unnamed: 8": "SECURE", "Unnamed: 9": "SSDSP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JAMJODHPUR</td>
+                        <td class="text-center name-col">66 KV KOTDA BAVISHI-2</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ5235B</td>
+                        <td class="d-none">
+                            95 JAMNAGAR KOTDA BAVISHI-2 SECURE SSDSP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "96", "Unnamed: 3": "JAMNAGAR", "Unnamed: 5": "KOTDA BAVISHI-3", "Unnamed: 8": "SECURE", "Unnamed: 9": "SSDSP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JAMJODHPUR</td>
+                        <td class="text-center name-col">66 KV KOTDA BAVISHI-3</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ5252B</td>
+                        <td class="d-none">
+                            96 JAMNAGAR KOTDA BAVISHI-3 SECURE SSDSP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "97", "Unnamed: 3": "JAMNAGAR", "Unnamed: 5": "KOTDA BAVISHI-3", "Unnamed: 8": "SECURE", "Unnamed: 9": "SSDSP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JAMJODHPUR</td>
+                        <td class="text-center name-col">M/S NECTAR ENERGY </td>
+                        <td class="text-center meter-col fw-bold text-primary">PGSDP30018C</td>
+                        <td class="d-none">
+                            97 JAMNAGAR KOTDA BAVISHI-3 SECURE SSDSP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "98", "Unnamed: 3": "JAMNAGAR", "Unnamed: 5": "KOTDA BAVISHI-3", "Unnamed: 8": "SECURE", "Unnamed: 9": "SSDSP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JAMJODHPUR</td>
+                        <td class="text-center name-col">M/S APEX ENERGY</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGSDP30019B</td>
+                        <td class="d-none">
+                            98 JAMNAGAR KOTDA BAVISHI-3 SECURE SSDSP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "99", "Unnamed: 3": "JAMNAGAR", "Unnamed: 5": "KOTDA BAVISHI-3", "Unnamed: 8": "SECURE", "Unnamed: 9": "SSDSP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JAMJODHPUR</td>
+                        <td class="text-center name-col">M/S BINA ENERGY</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGSDP30020B</td>
+                        <td class="d-none">
+                            99 JAMNAGAR KOTDA BAVISHI-3 SECURE SSDSP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "100", "Unnamed: 3": "JAMNAGAR", "Unnamed: 5": "KOTDA BAVISHI-3", "Unnamed: 8": "SECURE", "Unnamed: 9": "SSDSP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JAMJODHPUR</td>
+                        <td class="text-center name-col">M/S POWERTECH ENERGY</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGSDP30021B</td>
+                        <td class="d-none">
+                            100 JAMNAGAR KOTDA BAVISHI-3 SECURE SSDSP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "101", "Unnamed: 3": "JAMNAGAR", "Unnamed: 5": "KOTDA BAVISHI-3", "Unnamed: 8": "SECURE", "Unnamed: 9": "SSDSP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JAMJODHPUR</td>
+                        <td class="text-center name-col">M/S INFINITE ENERGY</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGSDP30022B</td>
+                        <td class="d-none">
+                            101 JAMNAGAR KOTDA BAVISHI-3 SECURE SSDSP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "102", "Unnamed: 3": "JAMNAGAR", "Unnamed: 5": "KOTDA BAVISHI-3", "Unnamed: 8": "SECURE", "Unnamed: 9": "SSDSP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JAMJODHPUR</td>
+                        <td class="text-center name-col">M/S RIYA ENERGY</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGSDP30023B</td>
+                        <td class="d-none">
+                            102 JAMNAGAR KOTDA BAVISHI-3 SECURE SSDSP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "103", "Unnamed: 3": "JAMNAGAR", "Unnamed: 5": "KOTDA BAVISHI-3", "Unnamed: 8": "SECURE", "Unnamed: 9": "SSDSP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JAMJODHPUR</td>
+                        <td class="text-center name-col">M/S NORAIZ ENERGY</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGSDP30038C</td>
+                        <td class="d-none">
+                            103 JAMNAGAR KOTDA BAVISHI-3 SECURE SSDSP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "104", "Unnamed: 3": "JAMNAGAR", "Unnamed: 5": "KOTDA BAVISHI-3", "Unnamed: 8": "SECURE", "Unnamed: 9": "SSDSP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JAMJODHPUR</td>
+                        <td class="text-center name-col">M/S JYOT ENERGY</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGSDP30039C</td>
+                        <td class="d-none">
+                            104 JAMNAGAR KOTDA BAVISHI-3 SECURE SSDSP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "105", "Unnamed: 3": "JAMNAGAR", "Unnamed: 5": "MANDASAN", "Unnamed: 8": "L&T", "Unnamed: 9": "SSDSP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JAMJODHPUR</td>
+                        <td class="text-center name-col">JAYDEEP NARENDRASINH WAGHELA</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGSDP30863B</td>
+                        <td class="d-none">
+                            105 JAMNAGAR MANDASAN L&T SSDSP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "108", "Unnamed: 3": "JAMNAGAR", "Unnamed: 5": "KHIRI", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "SSDSP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JAMNAGAR RURAL</td>
+                        <td class="text-center name-col">66 KV KHIRI</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ5319B</td>
+                        <td class="d-none">
+                            108 JAMNAGAR KHIRI SECURE GPRS SSDSP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "109", "Unnamed: 3": "JAMNAGAR", "Unnamed: 5": "KHIRI", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "SSDSP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JAMNAGAR RURAL</td>
+                        <td class="text-center name-col">VITRAG SUN POWER</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGSDP30007B</td>
+                        <td class="d-none">
+                            109 JAMNAGAR KHIRI SECURE GPRS SSDSP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "110", "Unnamed: 3": "JAMNAGAR", "Unnamed: 5": "KHIRI", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "SSDSP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JAMNAGAR RURAL</td>
+                        <td class="text-center name-col">VITRAG SOLAR ENERGY</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGSDP30008B</td>
+                        <td class="d-none">
+                            110 JAMNAGAR KHIRI SECURE GPRS SSDSP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "111", "Unnamed: 3": "JAMNAGAR", "Unnamed: 5": "SHISHANG-2", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "SSDSP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JAMNAGAR RURAL</td>
+                        <td class="text-center name-col">SHREEJI SOLAR PARK</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGSDP30079B</td>
+                        <td class="d-none">
+                            111 JAMNAGAR SHISHANG-2 SECURE GPRS SSDSP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "112", "Unnamed: 3": "JAMNAGAR", "Unnamed: 5": "SHISHANG-3", "Unnamed: 8": "SECURE", "Unnamed: 9": "SSDSP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JAMNAGAR RURAL</td>
+                        <td class="text-center name-col">PARAM SOLAR</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGSDP30080B</td>
+                        <td class="d-none">
+                            112 JAMNAGAR SHISHANG-3 SECURE SSDSP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "113", "Unnamed: 3": "JAMNAGAR", "Unnamed: 5": "MODPAR", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "SSDSP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JAMNAGAR RURAL</td>
+                        <td class="text-center name-col">SSK POWER</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGSDP30016B</td>
+                        <td class="d-none">
+                            113 JAMNAGAR MODPAR SECURE GPRS SSDSP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "114", "Unnamed: 3": "JAMNAGAR", "Unnamed: 5": "MODPAR", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "SSDSP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JAMNAGAR RURAL</td>
+                        <td class="text-center name-col">SHYAM K. RAGHWANI</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGSDP30824C</td>
+                        <td class="d-none">
+                            114 JAMNAGAR MODPAR SECURE GPRS SSDSP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "115", "Unnamed: 3": "JAMNAGAR", "Unnamed: 5": "MODPAR", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "SSDSP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JAMNAGAR RURAL</td>
+                        <td class="text-center name-col">KARSAN RAGHWANI</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGSDP31147B</td>
+                        <td class="d-none">
+                            115 JAMNAGAR MODPAR SECURE GPRS SSDSP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "116", "Unnamed: 3": "JAMNAGAR", "Unnamed: 5": "DHUDASIYA-1", "Unnamed: 8": "SECURE", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JAMNAGAR RURAL</td>
+                        <td class="text-center name-col">M/S JAY INTERNATIONAL</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5287B</td>
+                        <td class="d-none">
+                            116 JAMNAGAR DHUDASIYA-1 SECURE CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "117", "Unnamed: 3": "JAMNAGAR", "Unnamed: 5": "JAMDUDHAI-1", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JAMNAGAR RURAL</td>
+                        <td class="text-center name-col">M/S SATYAM ENERGY</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5156C</td>
+                        <td class="d-none">
+                            117 JAMNAGAR JAMDUDHAI-1 SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "118", "Unnamed: 3": "JAMNAGAR", "Unnamed: 5": "JAMDUDHAI-2", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JAMNAGAR RURAL</td>
+                        <td class="text-center name-col">M/S N N Patel & Co</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5145C</td>
+                        <td class="d-none">
+                            118 JAMNAGAR JAMDUDHAI-2 SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "119", "Unnamed: 3": "JAMNAGAR", "Unnamed: 5": "GUNDASARI-2", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JAMNAGAR RURAL</td>
+                        <td class="text-center name-col">M/S SANJAYKUMAR HARIBHAI PARSANA</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5188B</td>
+                        <td class="d-none">
+                            119 JAMNAGAR GUNDASARI-2 SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "120", "Unnamed: 3": "JAMNAGAR", "Unnamed: 5": "GUNDASARI-3", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JAMNAGAR RURAL</td>
+                        <td class="text-center name-col">M/S GUJARAT ALLOYS CAST PVT LTD</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5218B</td>
+                        <td class="d-none">
+                            120 JAMNAGAR GUNDASARI-3 SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "121", "Unnamed: 3": "JAMNAGAR", "Unnamed: 5": "PIYAVA(BHENSDAL)-2", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JAMNAGAR RURAL</td>
+                        <td class="text-center name-col">66 KV PIYAVA(BHENSDAL)-2</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ5528B</td>
+                        <td class="d-none">
+                            121 JAMNAGAR PIYAVA(BHENSDAL)-2 SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "122", "Unnamed: 3": "JAMNAGAR", "Unnamed: 5": "PIYAVA(BHENSDAL)-2", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JAMNAGAR RURAL</td>
+                        <td class="text-center name-col">M/S ITALICA GRANITO PVT LTD (IKKA GRANITO PVT LTD)</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5261B</td>
+                        <td class="d-none">
+                            122 JAMNAGAR PIYAVA(BHENSDAL)-2 SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "123", "Unnamed: 3": "JAMNAGAR", "Unnamed: 5": "PIYAVA(BHENSDAD)-4", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JAMNAGAR RURAL</td>
+                        <td class="text-center name-col">M/S LEMZON GRANITO LLP</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5296C</td>
+                        <td class="d-none">
+                            123 JAMNAGAR PIYAVA(BHENSDAD)-4 SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "124", "Unnamed: 3": "JAMNAGAR", "Unnamed: 5": "JAMVANTHALI-1", "Unnamed: 8": "SECURE", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JAMNAGAR RURAL</td>
+                        <td class="text-center name-col">66 KV JAMVANTHALI-1</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ5672B</td>
+                        <td class="d-none">
+                            124 JAMNAGAR JAMVANTHALI-1 SECURE CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "125", "Unnamed: 3": "JAMNAGAR", "Unnamed: 5": "JAMVANTHALI-1", "Unnamed: 8": "SECURE", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JAMNAGAR RURAL</td>
+                        <td class="text-center name-col">M/S SIYARAM VITRIFIED PVT LTD</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5294B</td>
+                        <td class="d-none">
+                            125 JAMNAGAR JAMVANTHALI-1 SECURE CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "126", "Unnamed: 3": "JAMNAGAR", "Unnamed: 5": "JAMVADI-4", "Unnamed: 8": "SECURE", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JAMNAGAR RURAL</td>
+                        <td class="text-center name-col">M/S PRECISE TECHNOCAST PVT LTD</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5270B</td>
+                        <td class="d-none">
+                            126 JAMNAGAR JAMVADI-4 SECURE CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "127", "Unnamed: 3": "JAMNAGAR", "Unnamed: 5": "DHUDASIYA-2", "Unnamed: 8": "SECURE", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JAMNAGAR RURAL</td>
+                        <td class="text-center name-col">66 KV DHUDASIYA-2</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ5415B</td>
+                        <td class="d-none">
+                            127 JAMNAGAR DHUDASIYA-2 SECURE CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "128", "Unnamed: 3": "JAMNAGAR", "Unnamed: 5": "DHUDASIYA-2", "Unnamed: 8": "SECURE", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JAMNAGAR RURAL</td>
+                        <td class="text-center name-col">M/S ABHAY EXTRUSION</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5259B</td>
+                        <td class="d-none">
+                            128 JAMNAGAR DHUDASIYA-2 SECURE CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "129", "Unnamed: 3": "JAMNAGAR", "Unnamed: 5": "DHUDASIYA-2", "Unnamed: 8": "SECURE", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JAMNAGAR RURAL</td>
+                        <td class="text-center name-col">M/S GOLD STAR POWER LTD</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5260B</td>
+                        <td class="d-none">
+                            129 JAMNAGAR DHUDASIYA-2 SECURE CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "130", "Unnamed: 3": "JAMNAGAR", "Unnamed: 5": "DHUDASIYA-3", "Unnamed: 8": "SECURE", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JAMNAGAR RURAL</td>
+                        <td class="text-center name-col">66 KV DHUDASIYA-3</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ6017B</td>
+                        <td class="d-none">
+                            130 JAMNAGAR DHUDASIYA-3 SECURE CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "131", "Unnamed: 3": "JAMNAGAR", "Unnamed: 5": "DHUDASIYA-3", "Unnamed: 8": "SECURE", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JAMNAGAR RURAL</td>
+                        <td class="text-center name-col">M/S ARPIT INDUSTRIES</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5285B</td>
+                        <td class="d-none">
+                            131 JAMNAGAR DHUDASIYA-3 SECURE CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "132", "Unnamed: 3": "JAMNAGAR", "Unnamed: 5": "DHUDASIYA-3", "Unnamed: 8": "SECURE", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JAMNAGAR RURAL</td>
+                        <td class="text-center name-col">M/S LATON CONNEXIONS</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5351B</td>
+                        <td class="d-none">
+                            132 JAMNAGAR DHUDASIYA-3 SECURE CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "133", "Unnamed: 3": "JAMNAGAR", "Unnamed: 5": "DHUDASIYA-3", "Unnamed: 8": "SECURE", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JAMNAGAR RURAL</td>
+                        <td class="text-center name-col">M/S JALARAM METAL ALLOYS</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5352B</td>
+                        <td class="d-none">
+                            133 JAMNAGAR DHUDASIYA-3 SECURE CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "134", "Unnamed: 3": "JAMNAGAR", "Unnamed: 5": "DHUDASIYA-3", "Unnamed: 8": "SECURE", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JAMNAGAR RURAL</td>
+                        <td class="text-center name-col">M/S GOLD METAL EXTRUSION</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5354B</td>
+                        <td class="d-none">
+                            134 JAMNAGAR DHUDASIYA-3 SECURE CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "135", "Unnamed: 3": "JAMNAGAR", "Unnamed: 5": "CHHATAR", "Unnamed: 8": "SECURE", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JAMNAGAR RURAL</td>
+                        <td class="text-center name-col">66 KV CHHATAR-1</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ6067B</td>
+                        <td class="d-none">
+                            135 JAMNAGAR CHHATAR SECURE CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "136", "Unnamed: 3": "JAMNAGAR", "Unnamed: 5": "CHHATAR", "Unnamed: 8": "SECURE", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JAMNAGAR RURAL</td>
+                        <td class="text-center name-col">M/S MERIDIAN CORPORATION</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5320B</td>
+                        <td class="d-none">
+                            136 JAMNAGAR CHHATAR SECURE CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "137", "Unnamed: 3": "JAMNAGAR", "Unnamed: 5": "CHHATAR", "Unnamed: 8": "SECURE", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JAMNAGAR RURAL</td>
+                        <td class="text-center name-col">M/S JACKGON CO</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5321B</td>
+                        <td class="d-none">
+                            137 JAMNAGAR CHHATAR SECURE CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "138", "Unnamed: 3": "JAMNAGAR", "Unnamed: 5": "CHHATAR", "Unnamed: 8": "SECURE", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JAMNAGAR RURAL</td>
+                        <td class="text-center name-col">M/S PARAS RINGS PVT LTD</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5323B</td>
+                        <td class="d-none">
+                            138 JAMNAGAR CHHATAR SECURE CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "139", "Unnamed: 3": "JUNAGADH", "Unnamed: 5": "66 KV KHAMBHALIYA ", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "PM KUSUM-C"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JUNAGADH RURAL-1</td>
+                        <td class="text-center name-col">M/s ANANY URJA PRIVATE LIMITED</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGKC0205M</td>
+                        <td class="d-none">
+                            139 JUNAGADH 66 KV KHAMBHALIYA  SECURE GPRS PM KUSUM-C 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "140", "Unnamed: 3": "JUNAGADH", "Unnamed: 5": "DEVKIGALOL", "Unnamed: 8": "GENUS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JUNAGADH RURAL-1</td>
+                        <td class="text-center name-col">M/S ARROW TECHNOCAST GUJARAT PVT LTD</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5382B</td>
+                        <td class="d-none">
+                            140 JUNAGADH DEVKIGALOL GENUS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "141", "Unnamed: 3": "JUNAGADH", "Unnamed: 5": "BILKHA", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JUNAGADH RURAL-1</td>
+                        <td class="text-center name-col">66 KV BILKHA </td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ13997B</td>
+                        <td class="d-none">
+                            141 JUNAGADH BILKHA SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "143", "Unnamed: 3": "JUNAGADH", "Unnamed: 5": "BILKHA", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JUNAGADH RURAL-1</td>
+                        <td class="text-center name-col">M/s STEELCON IMPEX PVT LTD</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG6083B</td>
+                        <td class="d-none">
+                            143 JUNAGADH BILKHA SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "147", "Unnamed: 3": "JUNAGADH", "Unnamed: 5": "CHIRODA", "Unnamed: 8": "L&T", "Unnamed: 9": "SSDSP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JUNAGADH RURAL-2</td>
+                        <td class="text-center name-col">PARESHBHAI KALUBHAI DOBARIYA</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGSDP31930C</td>
+                        <td class="d-none">
+                            147 JUNAGADH CHIRODA L&T SSDSP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "148", "Unnamed: 3": "JUNAGADH", "Unnamed: 5": "66 KV DHANDHUSAR ", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "PM KUSUM-C"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JUNAGADH RURAL-2</td>
+                        <td class="text-center name-col">M/s FOUR SQUARE GREEN ENERGY PRIVATE LIMITED</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGKC0253M</td>
+                        <td class="d-none">
+                            148 JUNAGADH 66 KV DHANDHUSAR  SECURE GPRS PM KUSUM-C 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "149", "Unnamed: 3": "JUNAGADH", "Unnamed: 5": "66 KV DHANDHUSAR", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "PM KUSUM-C"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JUNAGADH RURAL-2</td>
+                        <td class="text-center name-col">M/s FOUR SQUARE GREEN ENERGY PRIVATE LIMITED</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ13598B</td>
+                        <td class="d-none">
+                            149 JUNAGADH 66 KV DHANDHUSAR SECURE GPRS PM KUSUM-C 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "150", "Unnamed: 3": "JUNAGADH", "Unnamed: 5": "NAVAGAM (JND)", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">JUNAGADH RURAL-2</td>
+                        <td class="text-center name-col">66 KV NAVAGAM (JND)</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG0050B</td>
+                        <td class="d-none">
+                            150 JUNAGADH NAVAGAM (JND) SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "151", "Unnamed: 3": "JUNAGADH", "Unnamed: 5": "66 KV PRASHNAWADA", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "PM KUSUM-C"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">Veraval</td>
+                        <td class="text-center name-col">M/s PARIJAT SOLAR ENERGY LLP (PRASHNAWADA SS)</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGKC0211M</td>
+                        <td class="d-none">
+                            151 JUNAGADH 66 KV PRASHNAWADA SECURE GPRS PM KUSUM-C 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "152", "Unnamed: 3": "JUNAGADH", "Unnamed: 5": "66 KV AMBLASH", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "PM KUSUM-C"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">Veraval</td>
+                        <td class="text-center name-col">M/s PARIJAT SOLAR ENERGY LLP (AMBLASH SS)</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGKC0212M</td>
+                        <td class="d-none">
+                            152 JUNAGADH 66 KV AMBLASH SECURE GPRS PM KUSUM-C 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "153", "Unnamed: 3": "JUNAGADH", "Unnamed: 5": "66 KV AMBLASH", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "PM KUSUM-C"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">Veraval</td>
+                        <td class="text-center name-col">M/s PARIJAT SOLAR ENERGY LLP (AMBLASH SS)</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ12763B</td>
+                        <td class="d-none">
+                            153 JUNAGADH 66 KV AMBLASH SECURE GPRS PM KUSUM-C 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "154", "Unnamed: 3": "JUNAGADH", "Unnamed: 5": "66 KV MORADIYA", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "PM KUSUM-C"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">Veraval</td>
+                        <td class="text-center name-col">M/s FOUR SQUARE GREEN ENERGY PRIVATE LIMITED</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGKC0213M</td>
+                        <td class="d-none">
+                            154 JUNAGADH 66 KV MORADIYA SECURE GPRS PM KUSUM-C 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "155", "Unnamed: 3": "MORBI", "Unnamed: 5": "GHANSHYAMGADH-2", "Unnamed: 8": "SECURE", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">HALVAD</td>
+                        <td class="text-center name-col">66 KV NEW GHANSHYAMGADH-2</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ5310B</td>
+                        <td class="d-none">
+                            155 MORBI GHANSHYAMGADH-2 SECURE CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "156", "Unnamed: 3": "MORBI", "Unnamed: 5": "GHANSHYAMGADH-2", "Unnamed: 8": "SECURE", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">HALVAD</td>
+                        <td class="text-center name-col">M/S SEZON PAPERS PVT. LTD.</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5251B</td>
+                        <td class="d-none">
+                            156 MORBI GHANSHYAMGADH-2 SECURE CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "157", "Unnamed: 3": "MORBI", "Unnamed: 5": "SARA-5", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">HALVAD</td>
+                        <td class="text-center name-col">M/S SOLIZO VITRIFIED PVT LTD</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5519B</td>
+                        <td class="d-none">
+                            157 MORBI SARA-5 SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "158", "Unnamed: 3": "MORBI", "Unnamed: 5": "SARA-6", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">HALVAD</td>
+                        <td class="text-center name-col">M/S SPERITA GRANITO LLP</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5524C</td>
+                        <td class="d-none">
+                            158 MORBI SARA-6 SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "159", "Unnamed: 3": "MORBI", "Unnamed: 5": "CHUPANI-2", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">HALVAD</td>
+                        <td class="text-center name-col">66 KV CHUPANI-2</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ11986B</td>
+                        <td class="d-none">
+                            159 MORBI CHUPANI-2 SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "162", "Unnamed: 3": "PORBANDAR", "Unnamed: 5": "66 KV MOTI GASARI", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "PM KUSUM-C"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">Keshod</td>
+                        <td class="text-center name-col">M/s FOUR SQUARE GREEN ENERGY PRIVATE LIMITED</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGKC0258M</td>
+                        <td class="d-none">
+                            162 PORBANDAR 66 KV MOTI GASARI SECURE GPRS PM KUSUM-C 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "163", "Unnamed: 3": "PORBANDAR", "Unnamed: 5": "66 KV LADUDI", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "PM KUSUM-C"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">MANGROL</td>
+                        <td class="text-center name-col">M/s SAGAR MARINE IMPEX</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGKC0254M</td>
+                        <td class="d-none">
+                            163 PORBANDAR 66 KV LADUDI SECURE GPRS PM KUSUM-C 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "164", "Unnamed: 3": "PORBANDAR", "Unnamed: 5": "66 KV LADUDI", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "PM KUSUM-C"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">MANGROL</td>
+                        <td class="text-center name-col">M/s SAGAR MARINE IMPEX</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ12404B</td>
+                        <td class="d-none">
+                            164 PORBANDAR 66 KV LADUDI SECURE GPRS PM KUSUM-C 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "165", "Unnamed: 3": "PORBANDAR", "Unnamed: 5": "66 KV MARMATH", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "PM KUSUM-C"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">PORBANDAR RURAL</td>
+                        <td class="text-center name-col">M/s FOUR SQUARE GREEN ENERGY PRIVATE LIMITED</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGKC0219M</td>
+                        <td class="d-none">
+                            165 PORBANDAR 66 KV MARMATH SECURE GPRS PM KUSUM-C 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "166", "Unnamed: 3": "PORBANDAR", "Unnamed: 5": "66 KV MARMATH", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "PM KUSUM-C"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">PORBANDAR RURAL</td>
+                        <td class="text-center name-col">M/s FOUR SQUARE GREEN ENERGY PRIVATE LIMITED</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ12424B</td>
+                        <td class="d-none">
+                            166 PORBANDAR 66 KV MARMATH SECURE GPRS PM KUSUM-C 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "167", "Unnamed: 3": "PORBANDAR", "Unnamed: 5": "66 KV NANADIA", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "PM KUSUM-C"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">PORBANDAR RURAL</td>
+                        <td class="text-center name-col">M/s FOUR SQUARE GREEN ENERGY PRIVATE LIMITED</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGKC0218M</td>
+                        <td class="d-none">
+                            167 PORBANDAR 66 KV NANADIA SECURE GPRS PM KUSUM-C 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "168", "Unnamed: 3": "PORBANDAR", "Unnamed: 5": "66 KV NANADIA", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "PM KUSUM-C"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">PORBANDAR RURAL</td>
+                        <td class="text-center name-col">M/s FOUR SQUARE GREEN ENERGY PRIVATE LIMITED</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ12422B</td>
+                        <td class="d-none">
+                            168 PORBANDAR 66 KV NANADIA SECURE GPRS PM KUSUM-C 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "169", "Unnamed: 3": "RAJKOT RURAL", "Unnamed: 5": "BHANKH", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "SSDSP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">DHORAJI</td>
+                        <td class="text-center name-col">M/S SHREEJI ENERGY</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGSDP30012B</td>
+                        <td class="d-none">
+                            169 RAJKOT RURAL BHANKH SECURE GPRS SSDSP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "170", "Unnamed: 3": "RAJKOT RURAL", "Unnamed: 5": "132 KV BHAYAVADAR", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "PM KUSUM-C"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">DHORAJI</td>
+                        <td class="text-center name-col">M/s FOUR SQUARE GREEN ENERGY PRIVATE LIMITED</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGKC0222M</td>
+                        <td class="d-none">
+                            170 RAJKOT RURAL 132 KV BHAYAVADAR SECURE GPRS PM KUSUM-C 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "171", "Unnamed: 3": "RAJKOT RURAL", "Unnamed: 5": "ARNI-1", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">DHORAJI</td>
+                        <td class="text-center name-col">M/S ELITE POWER</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5100C</td>
+                        <td class="d-none">
+                            171 RAJKOT RURAL ARNI-1 SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "172", "Unnamed: 3": "RAJKOT RURAL", "Unnamed: 5": "KALANA", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">DHORAJI</td>
+                        <td class="text-center name-col">M/S MAGNETIC ELECTRIC</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5041C</td>
+                        <td class="d-none">
+                            172 RAJKOT RURAL KALANA SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "173", "Unnamed: 3": "RAJKOT RURAL", "Unnamed: 5": "KOLKI-1", "Unnamed: 8": "SECURE", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">DHORAJI</td>
+                        <td class="text-center name-col">66 KV KOLKI-1</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ5416B</td>
+                        <td class="d-none">
+                            173 RAJKOT RURAL KOLKI-1 SECURE CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "174", "Unnamed: 3": "RAJKOT RURAL", "Unnamed: 5": "TANASAVA-2", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">DHORAJI</td>
+                        <td class="text-center name-col">M/S LUMINOUS TECHNOCAST PVT LTD</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5613B</td>
+                        <td class="d-none">
+                            174 RAJKOT RURAL TANASAVA-2 SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "175", "Unnamed: 3": "RAJKOT RURAL", "Unnamed: 5": " MOTI PANELI-3", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">DHORAJI</td>
+                        <td class="text-center name-col">66 KV MOTI PANELI-3</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ11599B</td>
+                        <td class="d-none">
+                            175 RAJKOT RURAL  MOTI PANELI-3 SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "176", "Unnamed: 3": "RAJKOT RURAL", "Unnamed: 5": " MOTI PANELI-3", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">DHORAJI</td>
+                        <td class="text-center name-col">SIDDHARTH TECHNOCAST </td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5648B</td>
+                        <td class="d-none">
+                            176 RAJKOT RURAL  MOTI PANELI-3 SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "177", "Unnamed: 3": "RAJKOT RURAL", "Unnamed: 5": "PARBADI", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">DHORAJI</td>
+                        <td class="text-center name-col">M/s JAY SOMNATH PAPER MILL </td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5960B</td>
+                        <td class="d-none">
+                            177 RAJKOT RURAL PARBADI SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "178", "Unnamed: 3": "RAJKOT RURAL", "Unnamed: 5": "MOVIYA-2", "Unnamed: 8": "GENUS", "Unnamed: 9": "SSDSP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">GONDAL</td>
+                        <td class="text-center name-col">M/S SHREE ENERGY </td>
+                        <td class="text-center meter-col fw-bold text-primary">PGSDP30587B</td>
+                        <td class="d-none">
+                            178 RAJKOT RURAL MOVIYA-2 GENUS SSDSP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "179", "Unnamed: 3": "RAJKOT RURAL", "Unnamed: 5": "MOVIYA-2", "Unnamed: 8": "GENUS", "Unnamed: 9": "SSDSP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">GONDAL</td>
+                        <td class="text-center name-col">M/S SUN ENERGY</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGSDP30590B</td>
+                        <td class="d-none">
+                            179 RAJKOT RURAL MOVIYA-2 GENUS SSDSP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "180", "Unnamed: 3": "RAJKOT RURAL", "Unnamed: 5": "66 KV  KOLITHAD", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "PM KUSUM-C"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">GONDAL</td>
+                        <td class="text-center name-col">M/s WAA SOLAR LIMITED</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ13951B</td>
+                        <td class="d-none">
+                            180 RAJKOT RURAL 66 KV  KOLITHAD SECURE GPRS PM KUSUM-C 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "181", "Unnamed: 3": "RAJKOT RURAL", "Unnamed: 5": "66 KV  KOLITHAD", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "PM KUSUM-C"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">GONDAL</td>
+                        <td class="text-center name-col">M/s WAA SOLAR LIMITED</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGKC0103M</td>
+                        <td class="d-none">
+                            181 RAJKOT RURAL 66 KV  KOLITHAD SECURE GPRS PM KUSUM-C 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "182", "Unnamed: 3": "RAJKOT RURAL", "Unnamed: 5": "RAMOD-2", "Unnamed: 8": "SECURE", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">GONDAL</td>
+                        <td class="text-center name-col">M/S MAHADEV FERRO CAST</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5266B</td>
+                        <td class="d-none">
+                            182 RAJKOT RURAL RAMOD-2 SECURE CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "183", "Unnamed: 3": "RAJKOT RURAL", "Unnamed: 5": "BHADLA", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "PM KUSUM-C"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">Jetpur</td>
+                        <td class="text-center name-col">M/s KOSOL ENERGIE PVT. LTD.</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGKC0104M</td>
+                        <td class="d-none">
+                            183 RAJKOT RURAL BHADLA SECURE GPRS PM KUSUM-C 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "184", "Unnamed: 3": "RAJKOT RURAL", "Unnamed: 5": "66 KV UMRALI", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "PM KUSUM-C"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">Jetpur</td>
+                        <td class="text-center name-col">M/s KOSOL ENERGIE PVT. LTD.</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ11407B</td>
+                        <td class="d-none">
+                            184 RAJKOT RURAL 66 KV UMRALI SECURE GPRS PM KUSUM-C 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "185", "Unnamed: 3": "RAJKOT RURAL", "Unnamed: 5": "MOTA KHIJADIYA-1", "Unnamed: 8": "SECURE", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">RAJKOT RURAL</td>
+                        <td class="text-center name-col">M/S KRISHNA FOUNDRY</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5283B</td>
+                        <td class="d-none">
+                            185 RAJKOT RURAL MOTA KHIJADIYA-1 SECURE CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "186", "Unnamed: 3": "RAJKOT RURAL", "Unnamed: 5": "MOTA KHIJADIYA-3", "Unnamed: 8": "SECURE", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">RAJKOT RURAL</td>
+                        <td class="text-center name-col">66 KV MOTA KHIJADIYA-3</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ5645B</td>
+                        <td class="d-none">
+                            186 RAJKOT RURAL MOTA KHIJADIYA-3 SECURE CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "187", "Unnamed: 3": "RAJKOT RURAL", "Unnamed: 5": "MOTA KHIJADIYA-3", "Unnamed: 8": "SECURE", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">RAJKOT RURAL</td>
+                        <td class="text-center name-col">M/S FINEX TECHNOCAST</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5289B</td>
+                        <td class="d-none">
+                            187 RAJKOT RURAL MOTA KHIJADIYA-3 SECURE CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "188", "Unnamed: 3": "SURENDRANAGAR", "Unnamed: 5": "HIRAPUR-2", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">DHRANGADHRA</td>
+                        <td class="text-center name-col">66 KV HIRAPUR-2</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ12642B</td>
+                        <td class="d-none">
+                            188 SURENDRANAGAR HIRAPUR-2 SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "189", "Unnamed: 3": "SURENDRANAGAR", "Unnamed: 5": "HIRAPUR-2", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">DHRANGADHRA</td>
+                        <td class="text-center name-col">M/s FUTURE CERAMIC PRIVATE LIMITED</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG6001C</td>
+                        <td class="d-none">
+                            189 SURENDRANAGAR HIRAPUR-2 SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "190", "Unnamed: 3": "SURENDRANAGAR", "Unnamed: 5": "KANKAVATI", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">DHRANGADHRA</td>
+                        <td class="text-center name-col">66 KV KANKAVATI</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ13685B</td>
+                        <td class="d-none">
+                            190 SURENDRANAGAR KANKAVATI SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "191", "Unnamed: 3": "SURENDRANAGAR", "Unnamed: 5": "KANKAVATI", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">DHRANGADHRA</td>
+                        <td class="text-center name-col">M/s ZETA MICRONS LLP </td>
+                        <td class="text-center meter-col fw-bold text-primary">PG6101B</td>
+                        <td class="d-none">
+                            191 SURENDRANAGAR KANKAVATI SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "192", "Unnamed: 3": "SURENDRANAGAR", "Unnamed: 5": "SOLDI-1", "Unnamed: 8": "SECURE", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">DHRANGADHRA</td>
+                        <td class="text-center name-col">66 KV SOLDI-1</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ4466B</td>
+                        <td class="d-none">
+                            192 SURENDRANAGAR SOLDI-1 SECURE CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "193", "Unnamed: 3": "SURENDRANAGAR", "Unnamed: 5": "SOLDI-1", "Unnamed: 8": "SECURE", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">DHRANGADHRA</td>
+                        <td class="text-center name-col">M/S RADHE ENERGY</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5180B</td>
+                        <td class="d-none">
+                            193 SURENDRANAGAR SOLDI-1 SECURE CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "194", "Unnamed: 3": "SURENDRANAGAR", "Unnamed: 5": "SOLDI-1", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">DHRANGADHRA</td>
+                        <td class="text-center name-col">M/S BANSI SOLAR</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5181C</td>
+                        <td class="d-none">
+                            194 SURENDRANAGAR SOLDI-1 SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "195", "Unnamed: 3": "SURENDRANAGAR", "Unnamed: 5": "SOLDI-1", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">DHRANGADHRA</td>
+                        <td class="text-center name-col">M/S SARDAR SOLAR</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5182C</td>
+                        <td class="d-none">
+                            195 SURENDRANAGAR SOLDI-1 SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "196", "Unnamed: 3": "SURENDRANAGAR", "Unnamed: 5": "DHAMA-2", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">DHRANGADHRA</td>
+                        <td class="text-center name-col">M/S SOLISWIN POWER</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5265B</td>
+                        <td class="d-none">
+                            196 SURENDRANAGAR DHAMA-2 SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "197", "Unnamed: 3": "SURENDRANAGAR", "Unnamed: 5": "KAMALPUR", "Unnamed: 8": "SECURE", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">DHRANGADHRA</td>
+                        <td class="text-center name-col">66 KV KAMALPUR</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ8859B</td>
+                        <td class="d-none">
+                            197 SURENDRANAGAR KAMALPUR SECURE CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "198", "Unnamed: 3": "SURENDRANAGAR", "Unnamed: 5": "KAMALPUR", "Unnamed: 8": "SECURE", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">DHRANGADHRA</td>
+                        <td class="text-center name-col">M/S SUN SHINE TILES CO PVT LTD</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5216C</td>
+                        <td class="d-none">
+                            198 SURENDRANAGAR KAMALPUR SECURE CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "199", "Unnamed: 3": "SURENDRANAGAR", "Unnamed: 5": "SOLDI-2", "Unnamed: 8": "SECURE", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">DHRANGADHRA</td>
+                        <td class="text-center name-col">M/S HARI EXPORT</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5213C</td>
+                        <td class="d-none">
+                            199 SURENDRANAGAR SOLDI-2 SECURE CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "200", "Unnamed: 3": "SURENDRANAGAR", "Unnamed: 5": "RAMGADH-2", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">DHRANGADHRA</td>
+                        <td class="text-center name-col">M/S BRASSTECH ENGINEERING PVT LTD</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5495B</td>
+                        <td class="d-none">
+                            200 SURENDRANAGAR RAMGADH-2 SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "201", "Unnamed: 3": "SURENDRANAGAR", "Unnamed: 5": "BAISABGADH-2", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">DHRANGADHRA</td>
+                        <td class="text-center name-col">66 KV BAISABGADH-2</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ9479B</td>
+                        <td class="d-none">
+                            201 SURENDRANAGAR BAISABGADH-2 SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "202", "Unnamed: 3": "SURENDRANAGAR", "Unnamed: 5": "BAISABGADH-2", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">DHRANGADHRA</td>
+                        <td class="text-center name-col">M/S WELMICA LAMINATES PVT LTD</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5671B</td>
+                        <td class="d-none">
+                            202 SURENDRANAGAR BAISABGADH-2 SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "203", "Unnamed: 3": "SURENDRANAGAR", "Unnamed: 5": "KHODU-3", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">DHRANGADHRA</td>
+                        <td class="text-center name-col">M/s LAVISH GRANITO PVT LTD 3.85 MW</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5854B</td>
+                        <td class="d-none">
+                            203 SURENDRANAGAR KHODU-3 SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "204", "Unnamed: 3": "SURENDRANAGAR", "Unnamed: 5": "66 KV VASTADI ", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "PM KUSUM-C"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">LIMBDI</td>
+                        <td class="text-center name-col">M/s Friends Impex </td>
+                        <td class="text-center meter-col fw-bold text-primary">PGKC0139M</td>
+                        <td class="d-none">
+                            204 SURENDRANAGAR 66 KV VASTADI  SECURE GPRS PM KUSUM-C 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "205", "Unnamed: 3": "SURENDRANAGAR", "Unnamed: 5": "66 KV VASTADI ", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "PM KUSUM-C"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">LIMBDI</td>
+                        <td class="text-center name-col">M/s Friends Impex </td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ11472B</td>
+                        <td class="d-none">
+                            205 SURENDRANAGAR 66 KV VASTADI  SECURE GPRS PM KUSUM-C 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "206", "Unnamed: 3": "SURENDRANAGAR", "Unnamed: 5": "VAKHATPAR-1", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">LIMBDI</td>
+                        <td class="text-center name-col">M/S ACTIVE SUN POWER</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5040B</td>
+                        <td class="d-none">
+                            206 SURENDRANAGAR VAKHATPAR-1 SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "207", "Unnamed: 3": "SURENDRANAGAR", "Unnamed: 5": "VAKHATPAR-2", "Unnamed: 8": "SECURE", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">LIMBDI</td>
+                        <td class="text-center name-col">132 KV VAKHATPAR-2</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ4468B</td>
+                        <td class="d-none">
+                            207 SURENDRANAGAR VAKHATPAR-2 SECURE CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "208", "Unnamed: 3": "SURENDRANAGAR", "Unnamed: 5": "VAKHATPAR-2", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">LIMBDI</td>
+                        <td class="text-center name-col">M/S ADITYA URJA</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5089C</td>
+                        <td class="d-none">
+                            208 SURENDRANAGAR VAKHATPAR-2 SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "209", "Unnamed: 3": "SURENDRANAGAR", "Unnamed: 5": "VAKHATPAR-3", "Unnamed: 8": "SECURE", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">LIMBDI</td>
+                        <td class="text-center name-col">132 KV VAKHATPAR-3</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ4693B</td>
+                        <td class="d-none">
+                            209 SURENDRANAGAR VAKHATPAR-3 SECURE CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "210", "Unnamed: 3": "SURENDRANAGAR", "Unnamed: 5": "VAKHATPAR-3", "Unnamed: 8": "SECURE", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">LIMBDI</td>
+                        <td class="text-center name-col">M/S APPOLLO POWER</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5124C</td>
+                        <td class="d-none">
+                            210 SURENDRANAGAR VAKHATPAR-3 SECURE CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "211", "Unnamed: 3": "SURENDRANAGAR", "Unnamed: 5": "VAKHATPAR-3", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">LIMBDI</td>
+                        <td class="text-center name-col">M/S ATLANTIS ENERGY</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5125B</td>
+                        <td class="d-none">
+                            211 SURENDRANAGAR VAKHATPAR-3 SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "212", "Unnamed: 3": "SURENDRANAGAR", "Unnamed: 5": "VAKHATPAR-3", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">LIMBDI</td>
+                        <td class="text-center name-col">M/S ACCURATE STEEL INDUSTRIES</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5507B</td>
+                        <td class="d-none">
+                            212 SURENDRANAGAR VAKHATPAR-3 SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "213", "Unnamed: 3": "SURENDRANAGAR", "Unnamed: 5": "MANDLASAR", "Unnamed: 8": "SECURE", "Unnamed: 9": "SSDSP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">SURENDRANAGAR</td>
+                        <td class="text-center name-col">M/S POWER UP SOLAR PVT LTD</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGSDP30581B</td>
+                        <td class="d-none">
+                            213 SURENDRANAGAR MANDLASAR SECURE SSDSP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "214", "Unnamed: 3": "SURENDRANAGAR", "Unnamed: 5": "MANDLASAR", "Unnamed: 8": "SECURE", "Unnamed: 9": "SSDSP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">SURENDRANAGAR</td>
+                        <td class="text-center name-col">M/S STAR NOVA SOLAR PVT LTD</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGSDP30583C</td>
+                        <td class="d-none">
+                            214 SURENDRANAGAR MANDLASAR SECURE SSDSP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "215", "Unnamed: 3": "SURENDRANAGAR", "Unnamed: 5": "MANDLASAR", "Unnamed: 8": "SECURE", "Unnamed: 9": "SSDSP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">SURENDRANAGAR</td>
+                        <td class="text-center name-col">M/S SUN BRUST GRID SOLAR PVT LTD</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGSDP30584C</td>
+                        <td class="d-none">
+                            215 SURENDRANAGAR MANDLASAR SECURE SSDSP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "216", "Unnamed: 3": "SURENDRANAGAR", "Unnamed: 5": "LAKHTAR-3", "Unnamed: 8": "SECURE", "Unnamed: 9": "SSDSP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">SURENDRANAGAR</td>
+                        <td class="text-center name-col">KANCHANBEN ISHWARBHAI PATEL</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGSDP30097B</td>
+                        <td class="d-none">
+                            216 SURENDRANAGAR LAKHTAR-3 SECURE SSDSP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "217", "Unnamed: 3": "SURENDRANAGAR", "Unnamed: 5": "LAKHANKA-1", "Unnamed: 8": "SECURE", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">SURENDRANAGAR</td>
+                        <td class="text-center name-col">M/S HITECH (MORBI) SOLAR</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5008C</td>
+                        <td class="d-none">
+                            217 SURENDRANAGAR LAKHANKA-1 SECURE CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "218", "Unnamed: 3": "SURENDRANAGAR", "Unnamed: 5": "LAKHANKA-1", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">SURENDRANAGAR</td>
+                        <td class="text-center name-col">M/S SUN SOLAR</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5033C</td>
+                        <td class="d-none">
+                            218 SURENDRANAGAR LAKHANKA-1 SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "219", "Unnamed: 3": "SURENDRANAGAR", "Unnamed: 5": "LAKHTAR-1", "Unnamed: 8": "SECURE", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">SURENDRANAGAR</td>
+                        <td class="text-center name-col">66 KV LAKHATAR-1</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ4692B</td>
+                        <td class="d-none">
+                            219 SURENDRANAGAR LAKHTAR-1 SECURE CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "220", "Unnamed: 3": "SURENDRANAGAR", "Unnamed: 5": "LAKHTAR-1", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">SURENDRANAGAR</td>
+                        <td class="text-center name-col">M/S AADITYA SOLAR ENERGY</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5122C</td>
+                        <td class="d-none">
+                            220 SURENDRANAGAR LAKHTAR-1 SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "221", "Unnamed: 3": "SURENDRANAGAR", "Unnamed: 5": "LAKHTAR-1", "Unnamed: 8": "SECURE", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">SURENDRANAGAR</td>
+                        <td class="text-center name-col">M/S CRYSTAL SUN POWER</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5123C</td>
+                        <td class="d-none">
+                            221 SURENDRANAGAR LAKHTAR-1 SECURE CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "222", "Unnamed: 3": "SURENDRANAGAR", "Unnamed: 5": "LAKHTAR-2", "Unnamed: 8": "SECURE", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">SURENDRANAGAR</td>
+                        <td class="text-center name-col">M/S NIDHI ENERGY</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5174C</td>
+                        <td class="d-none">
+                            222 SURENDRANAGAR LAKHTAR-2 SECURE CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "223", "Unnamed: 3": "SURENDRANAGAR", "Unnamed: 5": "LAKHTAR-2", "Unnamed: 8": "SECURE", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">SURENDRANAGAR</td>
+                        <td class="text-center name-col">M/S SIDDHI ENERGY</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5175C</td>
+                        <td class="d-none">
+                            223 SURENDRANAGAR LAKHTAR-2 SECURE CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "224", "Unnamed: 3": "SURENDRANAGAR", "Unnamed: 5": "LAKHTAR-3", "Unnamed: 8": "SECURE", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">SURENDRANAGAR</td>
+                        <td class="text-center name-col">M/S KANCHANBEN ISHWARBHAI PATEL</td>
+                        <td class="text-center meter-col fw-bold text-primary">PGSDP30097B</td>
+                        <td class="d-none">
+                            224 SURENDRANAGAR LAKHTAR-3 SECURE CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "225", "Unnamed: 3": "SURENDRANAGAR", "Unnamed: 5": "LAKHTAR-4", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">SURENDRANAGAR</td>
+                        <td class="text-center name-col">66 KV LAKHTAR-4</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ7157B</td>
+                        <td class="d-none">
+                            225 SURENDRANAGAR LAKHTAR-4 SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "226", "Unnamed: 3": "SURENDRANAGAR", "Unnamed: 5": "LAKHTAR-4", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">SURENDRANAGAR</td>
+                        <td class="text-center name-col">M/S SHIVAM SOLAR</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5206C</td>
+                        <td class="d-none">
+                            226 SURENDRANAGAR LAKHTAR-4 SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "227", "Unnamed: 3": "SURENDRANAGAR", "Unnamed: 5": "LAKHTAR-4", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">SURENDRANAGAR</td>
+                        <td class="text-center name-col">M/S SHIVAM POWER</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5207C</td>
+                        <td class="d-none">
+                            227 SURENDRANAGAR LAKHTAR-4 SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "228", "Unnamed: 3": "SURENDRANAGAR", "Unnamed: 5": "LAKHTAR-4", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">SURENDRANAGAR</td>
+                        <td class="text-center name-col">M/S HAREKRISHNA POWER</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5208C</td>
+                        <td class="d-none">
+                            228 SURENDRANAGAR LAKHTAR-4 SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "229", "Unnamed: 3": "SURENDRANAGAR", "Unnamed: 5": "ABHEPAR", "Unnamed: 8": "SECURE", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">SURENDRANAGAR</td>
+                        <td class="text-center name-col">66 KV ABHEPAR</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ5171B</td>
+                        <td class="d-none">
+                            229 SURENDRANAGAR ABHEPAR SECURE CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "230", "Unnamed: 3": "SURENDRANAGAR", "Unnamed: 5": "ABHEPAR", "Unnamed: 8": "SECURE", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">SURENDRANAGAR</td>
+                        <td class="text-center name-col">M/S TRIVEDI MINERALS SUPPLIERS CO</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5229C</td>
+                        <td class="d-none">
+                            230 SURENDRANAGAR ABHEPAR SECURE CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "231", "Unnamed: 3": "SURENDRANAGAR", "Unnamed: 5": "KHATDI-2", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">SURENDRANAGAR</td>
+                        <td class="text-center name-col">M/s RICH VITRIFIED PVT LTD</td>
+                        <td class="text-center meter-col fw-bold text-primary">PG5821B</td>
+                        <td class="d-none">
+                            231 SURENDRANAGAR KHATDI-2 SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                    <tr data-details='{"Unnamed: 2": "232", "Unnamed: 3": "SURENDRANAGAR", "Unnamed: 5": "KHARVA-2", "Unnamed: 8": "SECURE GPRS", "Unnamed: 9": "CPP"}'>
+                        <td class="text-center text-primary"><i class="fas fa-plus-circle"></i></td>
+                        <td class="text-center fw-semibold div-col">SURENDRANAGAR</td>
+                        <td class="text-center name-col">66 KV KHARVA-2</td>
+                        <td class="text-center meter-col fw-bold text-primary">GJ13514B</td>
+                        <td class="d-none">
+                            232 SURENDRANAGAR KHARVA-2 SECURE GPRS CPP 
+                        </td>
+                    </tr>
+                    
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<button id="scrollTopBtn" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">
+    <i class="fas fa-chevron-up"></i>
+</button>
+
+<!-- Scripts -->
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mark.js@8.11.1/dist/jquery.mark.min.js"></script>
+<script>
+    function format(d) {
+        let details = d;
+        if (typeof d === 'string') {
+            try {
+                details = JSON.parse(d);
+            } catch (e) {
+                console.error("Error parsing details:", e);
+                return '<div class="details-child">Error loading details</div>';
+            }
+        }
+        if (!details || Object.keys(details).length === 0) {
+            return '<div class="details-child">No additional details available</div>';
+        }
+        let gridHtml = '<div class="details-child"><div class="details-grid">';
+        for (const [key, value] of Object.entries(details)) {
+            gridHtml += `
+                <div class="detail-item">
+                    <span class="detail-label">${key}</span>
+                    <span class="detail-value">${value || '-'}</span>
+                </div>
+            `;
+        }
+        gridHtml += '</div></div>';
+        return gridHtml;
+    }
+    $(document).ready(function() {
+        const table = $('#mainTable').DataTable({
+            responsive: false,
+            pageLength: 25,
+            dom: '<"d-flex justify-content-between align-items-center mb-4"lf>rt<"d-flex justify-content-between align-items-center mt-4"ip>',
+            language: {
+                search: "",
+                searchPlaceholder: "🔍 Search everything...",
+                lengthMenu: "_MENU_ per page"
+            },
+            order: [[1, 'asc']],
+            columnDefs: [
+                { orderable: false, targets: 0 }
+            ]
+        });
+        $('#mainTable tbody').on('click', 'tr', function() {
+            const tr = $(this);
+            const row = table.row(tr);
+            const icon = tr.find('td:first i');
+            if (row.child.isShown()) {
+                row.child.hide();
+                tr.removeClass('shown');
+                icon.removeClass('fa-minus-circle').addClass('fa-plus-circle');
+            } else {
+                row.child(format(tr.data('details'))).show();
+                tr.addClass('shown');
+                icon.removeClass('fa-plus-circle').addClass('fa-minus-circle');
+            }
+        });
+        table.on('draw', function() {
+            const body = $(table.table().body());
+            body.unmark();
+            body.mark(table.search());
+        });
+        initTheme();
+        const updateModal = new bootstrap.Modal(document.getElementById('updateModal'));
+        updateModal.show();
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 300) $('#scrollTopBtn').css('display', 'flex');
+            else $('#scrollTopBtn').hide();
+        });
+    });
+    function initTheme() {
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        updateThemeIcon(savedTheme);
+    }
+    function toggleTheme() {
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+        updateThemeIcon(newTheme);
+    }
+    function updateThemeIcon(theme) {
+        const icon = document.getElementById('themeIcon');
+        icon.className = theme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+    }
+</script>
+</body>
+</html>
